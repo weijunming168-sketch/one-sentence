@@ -44,7 +44,7 @@ const FavoritesList: React.FC<FavoritesListProps> = ({ favorites, onRemoveFavori
               {fav.quote}
             </p>
              <p className="text-sm text-gray-500 mt-1">({fav.translation})</p>
-            <p className="text-sm text-gray-600 mt-2">— {fav.author} {fav.source && <span className="text-gray-400">《{fav.source}》</span>}</p>
+            <p className="text-sm text-gray-600 mt-2">— {fav.author} {fav.source && <span className="text-gray-400">({fav.source})</span>}</p>
           </div>
           <div className="flex items-center space-x-3 flex-shrink-0 pt-1">
              <button onClick={() => onShare(fav)} title="分享" className="text-gray-400 hover:text-gray-800 transition-colors duration-200">

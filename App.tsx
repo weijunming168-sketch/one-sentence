@@ -27,7 +27,7 @@ const App: React.FC = () => {
   const [currentCategory, setCurrentCategory] = useState<string>(CATEGORIES[0]);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   
-  const isInitialMount = useRef(true);
+  const needsToFetch = useRef(true);
 
   const fetchNewBatch = useCallback(async (category: string) => {
     setIsLoading(true);
@@ -55,13 +55,14 @@ const App: React.FC = () => {
   }, [seenQuotes]);
   
   useEffect(() => {
-    if (showFavorites) return;
-    // Fetch only on initial mount or when category changes
-     if (isInitialMount.current) {
+    if (showFavorites) {
+        return;
+    }
+    if (needsToFetch.current) {
         fetchNewBatch(currentCategory);
-        isInitialMount.current = false;
-     }
-  }, [fetchNewBatch, currentCategory, showFavorites]);
+        needsToFetch.current = false;
+    }
+  }, [currentCategory, showFavorites, fetchNewBatch]);
 
   useEffect(() => {
     try {
@@ -77,6 +78,7 @@ const App: React.FC = () => {
       setQuote(nextQuote);
       setQuoteCache(quoteCache.slice(1));
     } else {
+      needsToFetch.current = true;
       fetchNewBatch(currentCategory);
     }
   };
@@ -86,8 +88,7 @@ const App: React.FC = () => {
         setCurrentCategory(category);
         setQuote(null);
         setQuoteCache([]);
-        isInitialMount.current = true; // Force refetch
-        fetchNewBatch(category);
+        needsToFetch.current = true;
     }
     setIsDropdownOpen(false);
   }
@@ -107,7 +108,7 @@ const App: React.FC = () => {
   };
 
   const handleShare = async (quoteToShare: Quote) => {
-    const shareText = `"${quoteToShare.quote}"\n(${quoteToShare.translation})\n\n— ${quoteToShare.author}${quoteToShare.source ? `《${quoteToShare.source}》` : ''}`;
+    const shareText = `"${quoteToShare.quote}"\n(${quoteToShare.translation})\n\n— ${quoteToShare.author}${quoteToShare.source ? ` (${quoteToShare.source})` : ''}`;
     if (navigator.share) {
       try {
         await navigator.share({
@@ -126,52 +127,59 @@ const App: React.FC = () => {
   };
 
   const handleRemoveFavorite = (quoteToRemove: Quote) => {
-    setFavorites(favorites.filter(fav => !(fav.quote === quoteToRemove.quote && fav.author === quoteToRemove.author)));
+    setFavorites(prevFavorites => 
+      prevFavorites.filter(fav => !(fav.quote === quoteToRemove.quote && fav.author === quoteToRemove.author))
+    );
   };
 
-
   return (
-    <div className="bg-gray-100 min-h-screen font-sans flex flex-col items-center justify-center p-4 sm:p-8 relative">
-      
-       <div className="absolute top-6 left-6 sm:top-8 sm:left-8 z-30">
-        <div className="relative">
-          <button
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="px-4 py-2 bg-white text-gray-700 font-semibold rounded-lg shadow-md border border-gray-300 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-opacity-75 transition-all duration-200 flex items-center"
-          >
-            {currentCategory}
-            <i className={`fas fa-chevron-down ml-2 transition-transform duration-300 ${isDropdownOpen ? 'transform rotate-180' : ''}`}></i>
-          </button>
-          <div 
-            className={`absolute top-full left-0 mt-2 w-40 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden transition-all duration-300 ease-in-out ${isDropdownOpen ? 'opacity-100 transform scale-100' : 'opacity-0 transform scale-95 pointer-events-none'}`}
-          >
-            {CATEGORIES.map(cat => (
-              <a
-                key={cat}
-                href="#"
-                onClick={(e) => { e.preventDefault(); handleCategoryChange(cat); }}
-                className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${currentCategory === cat ? 'font-bold text-gray-900' : ''}`}
-              >
-                {cat}
-              </a>
-            ))}
-          </div>
-        </div>
-      </div>
+    <div className="bg-gray-100 min-h-screen font-sans flex flex-col items-center p-4 sm:p-8">
       
       {!showFavorites && (
-        <button
-            onClick={() => setShowFavorites(true)}
-            className="absolute top-6 right-6 sm:top-8 sm:right-8 px-4 py-2 bg-white text-gray-700 font-semibold rounded-lg shadow-md border border-gray-300 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-opacity-75 transition-all duration-200 z-20"
-        >
-            我的收藏
-        </button>
+        <header className="w-full max-w-2xl mx-auto flex justify-between items-start mb-8">
+          <h1 className="text-6xl font-bold text-gray-800 flex items-center font-['Songti_SC','Noto_Serif_SC',serif]">
+            <span className="border-b-2 border-gray-600 pb-1">一</span>
+            <span className="bg-gray-800 text-white px-3 ml-2 rounded-md">句</span>
+          </h1>
+          
+          <div className="flex flex-col items-end">
+            <button
+                onClick={() => setShowFavorites(true)}
+                className="w-36 justify-center px-4 py-2 bg-white text-gray-700 font-semibold rounded-lg shadow-md border border-gray-300 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-opacity-75 transition-all duration-200 flex items-center"
+            >
+                我的收藏
+            </button>
+            <div className="relative mt-4">
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-36 px-4 py-2 bg-white text-gray-700 font-semibold rounded-lg shadow-md border border-gray-300 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-opacity-75 transition-all duration-200 flex items-center justify-center"
+              >
+                <span>{currentCategory}</span>
+                <i className={`fas fa-chevron-down ml-2 transition-transform duration-300 ${isDropdownOpen ? 'transform rotate-180' : ''}`}></i>
+              </button>
+              <div 
+                className={`absolute top-full right-0 mt-2 w-40 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden transition-all duration-300 ease-in-out z-30 ${isDropdownOpen ? 'opacity-100 transform scale-100' : 'opacity-0 transform scale-95 pointer-events-none'}`}
+              >
+                {CATEGORIES.map(cat => (
+                  <a
+                    key={cat}
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); handleCategoryChange(cat); }}
+                    className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 ${currentCategory === cat ? 'font-bold text-gray-900' : ''}`}
+                  >
+                    {cat}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </header>
       )}
 
-      <main className="w-full max-w-2xl mx-auto flex flex-col items-stretch pt-20">
+      <main className="w-full max-w-2xl mx-auto flex flex-col items-stretch">
         <div className="mb-8">
             {isLoading && <LoadingSpinner />}
-            {error && <ErrorDisplay message={error} onRetry={() => fetchNewBatch(currentCategory)} />}
+            {error && <ErrorDisplay message={error} onRetry={() => { needsToFetch.current = true; fetchNewBatch(currentCategory); }} />}
             {!isLoading && !error && quote && !showFavorites && (
               <QuoteCard
                 quote={quote.quote}
@@ -207,7 +215,7 @@ const App: React.FC = () => {
             <div className="text-center mt-8">
               <button
                 onClick={() => setShowFavorites(false)}
-                className="px-6 py-3 bg-white text-gray-800 font-semibold rounded-lg shadow-md border border-gray-300 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition-all duration-200"
+                className="px-6 py-3 bg-white text-gray-800 font-semibold rounded-lg shadow-md border border-gray-300 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 transition-colors duration-200"
               >
                 返回
               </button>
@@ -215,7 +223,6 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
-      
     </div>
   );
 };

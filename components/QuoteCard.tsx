@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface QuoteCardProps {
   quote: string;
@@ -11,8 +11,25 @@ interface QuoteCardProps {
 }
 
 const QuoteCard: React.FC<QuoteCardProps> = ({ quote, author, translation, source, isFavorite, onFavorite, onShare }) => {
+  const [animateFavorite, setAnimateFavorite] = useState(false);
+  const [animateShare, setAnimateShare] = useState(false);
+
+  const handleFavoriteClick = () => {
+    if (!animateFavorite) {
+      setAnimateFavorite(true);
+    }
+    onFavorite();
+  };
+
+  const handleShareClick = () => {
+    if (!animateShare) {
+      setAnimateShare(true);
+    }
+    onShare();
+  };
+
   return (
-    <div className="bg-white p-6 sm:p-10 rounded-lg shadow-lg border border-gray-200 min-h-[250px] flex flex-col justify-center relative transition-all duration-300">
+    <div className="bg-white px-6 sm:px-10 pt-6 sm:pt-10 pb-16 rounded-lg shadow-lg border border-gray-200 min-h-[250px] flex flex-col justify-center relative transition-all duration-300">
       <blockquote className="text-center">
         <p className="text-xl sm:text-2xl md:text-3xl font-['Songti_SC','Noto_Serif_SC',serif] text-gray-800 mb-4 relative z-10">
           <span className="absolute -top-6 -left-6 text-8xl text-gray-100 font-serif z-0">“</span>
@@ -25,16 +42,22 @@ const QuoteCard: React.FC<QuoteCardProps> = ({ quote, author, translation, sourc
         </footer>
         {source && (
             <cite className="text-sm text-gray-400 mt-2 block not-italic z-10 relative">
-                《{source}》
+                ({source})
             </cite>
         )}
       </blockquote>
-      <div className="absolute bottom-4 right-4 flex items-center space-x-4 z-10">
-        <button onClick={onFavorite} title={isFavorite ? "取消收藏" : "收藏"} className="text-gray-400 hover:text-red-500 transition-colors duration-200">
-          <i className={`fas fa-heart text-xl ${isFavorite ? 'text-red-500' : ''}`}></i>
+      <div className="absolute bottom-6 right-6 flex items-center space-x-4 z-10">
+        <button onClick={handleFavoriteClick} title={isFavorite ? "取消收藏" : "收藏"} className="text-gray-400 hover:text-red-500 transition-colors duration-200">
+          <i
+            className={`fas fa-heart text-xl ${isFavorite ? 'text-red-500' : ''} ${animateFavorite ? 'animate-heartbeat' : ''}`}
+            onAnimationEnd={() => setAnimateFavorite(false)}
+          />
         </button>
-        <button onClick={onShare} title="分享" className="text-gray-400 hover:text-gray-800 transition-colors duration-200">
-          <i className="fas fa-share-alt text-xl"></i>
+        <button onClick={handleShareClick} title="分享" className="text-gray-400 hover:text-gray-800 transition-colors duration-200">
+          <i
+            className={`fas fa-share-alt text-xl ${animateShare ? 'animate-share-pop' : ''}`}
+            onAnimationEnd={() => setAnimateShare(false)}
+          />
         </button>
       </div>
     </div>

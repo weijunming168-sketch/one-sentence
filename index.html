@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
   <head>
@@ -17,6 +16,27 @@
   }
 }
 </script>
+  <style>
+      @keyframes heartbeat {
+        0% { transform: scale(1); }
+        25% { transform: scale(1.3); }
+        50% { transform: scale(1); }
+        75% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+      }
+      .animate-heartbeat {
+        animation: heartbeat 0.6s ease-in-out;
+      }
+
+      @keyframes share-pop {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+      }
+      .animate-share-pop {
+        animation: share-pop 0.4s ease-in-out;
+      }
+    </style>
 </head>
   <body class="bg-gray-100">
     <div id="root"></div>
