@@ -8,10 +8,23 @@ import FavoritesList from './components/FavoritesList';
 
 const CATEGORIES = ['随机', '爱', '勇气', '智慧', '成功', '幸福', '人生'];
 
+// Helper to create a unique identifier for a quote
+const getQuoteId = (quote: Quote): string => `${quote.quote}|${quote.author}`;
+
 const App: React.FC = () => {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteCache, setQuoteCache] = useState<Quote[]>([]);
-  const [seenQuotes, setSeenQuotes] = useState<Quote[]>([]);
+  const [seenQuotes, setSeenQuotes] = useState<Quote[]>([]); // For API prompt (last 20)
+  const [seenQuotesHistory, setSeenQuotesHistory] = useState<Set<string>>(() => { // For client-side check (all)
+    try {
+      const savedHistory = localStorage.getItem('seenQuotesHistory');
+      return savedHistory ? new Set(JSON.parse(savedHistory)) : new Set();
+    } catch (error) {
+      console.error("Error reading seen quotes history from localStorage", error);
+      return new Set();
+    }
+  });
+
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Quote[]>(() => {
@@ -29,30 +42,69 @@ const App: React.FC = () => {
   
   const needsToFetch = useRef(true);
 
+  // Effect to save seen quotes history to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('seenQuotesHistory', JSON.stringify(Array.from(seenQuotesHistory)));
+    } catch (error) {
+      console.error("Error saving seen quotes history to localStorage", error);
+    }
+  }, [seenQuotesHistory]);
+
+
   const fetchNewBatch = useCallback(async (category: string) => {
     setIsLoading(true);
     setError(null);
-    try {
-      const newQuotes = await fetchQuotesBatch({ category, seenQuotes });
-      if (newQuotes.length > 0) {
-        setQuote(newQuotes[0]);
-        setQuoteCache(newQuotes.slice(1));
-        // Add to seen quotes to avoid immediate repetition
-        setSeenQuotes(prev => [...prev, ...newQuotes].slice(-20));
-      } else {
-        setError('未能获取到新的名言。');
-      }
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('获取名言时发生未知错误。');
-      }
-      setQuote(null);
-    } finally {
-      setIsLoading(false);
+    const maxRetries = 3;
+
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const newQuotes = await fetchQuotesBatch({ category, seenQuotes });
+            
+            // Filter out quotes that have been seen before
+            const freshQuotes = newQuotes.filter(q => !seenQuotesHistory.has(getQuoteId(q)));
+
+            if (freshQuotes.length > 0) {
+                const firstQuote = freshQuotes[0];
+                const restOfQuotes = freshQuotes.slice(1);
+                
+                setQuote(firstQuote);
+                setQuoteCache(restOfQuotes);
+                
+                // Update history with all fresh quotes
+                setSeenQuotesHistory(prevHistory => {
+                    const newHistory = new Set(prevHistory);
+                    freshQuotes.forEach(q => newHistory.add(getQuoteId(q)));
+                    return newHistory;
+                });
+
+                // Update the list for the API prompt (last 20 from the new batch)
+                setSeenQuotes(prev => [...prev, ...freshQuotes].slice(-20));
+                
+                setIsLoading(false);
+                return; // Exit function successfully
+            }
+            // If no fresh quotes, the loop will continue to retry
+            
+        } catch (err) {
+            // Handle API error immediately and stop retrying
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError('获取名言时发生未知错误。');
+            }
+            setQuote(null);
+            setIsLoading(false);
+            return;
+        }
     }
-  }, [seenQuotes]);
+    
+    // If loop finishes without finding fresh quotes
+    setError('未能获取到新的名言，请稍后再试或尝试更换分类。');
+    setQuote(null);
+    setIsLoading(false);
+
+  }, [seenQuotes, seenQuotesHistory]);
   
   useEffect(() => {
     if (showFavorites) {
